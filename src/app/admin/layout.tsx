@@ -3,6 +3,7 @@
 import AdminProtection from "@/components/admin/AdminProtection";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeader from "@/components/admin/AdminHeader";
+import RoleDebugger from "@/components/debug/RoleDebugger";
 
 export default function AdminLayout({
   children,
@@ -32,6 +33,9 @@ export default function AdminLayout({
             <div className="max-w-full min-h-full">{children}</div>
           </main>
         </div>
+
+        {/* Debug Component - Remove in production */}
+        <RoleDebugger />
       </div>
     </AdminProtection>
   );

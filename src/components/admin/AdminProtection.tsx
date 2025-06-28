@@ -1,6 +1,7 @@
 "use client";
 
-import { useAdminAuth } from "@/hooks/useAdminAuth";
+// import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { useSimpleAdminAuth as useAdminAuth } from "@/hooks/useSimpleAdminAuth"; // Temporary fallback
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useAuth } from "@clerk/nextjs";

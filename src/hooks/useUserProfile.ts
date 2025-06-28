@@ -33,6 +33,29 @@ export const useUserProfile = (): UseUserProfileReturn => {
     try {
       setLoading(true);
       setError(null);
+
+      // Check if API URL is available
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      if (!apiUrl || apiUrl.includes("placeholder")) {
+        // API not available, use mock data for now
+        const mockProfile = {
+          clerk_user_id: "mock_user",
+          email: "user@example.com",
+          first_name: "User",
+          last_name: "Name",
+          profile_id: "mock_profile",
+          total_credits: 10,
+          used_credits: 0,
+          available_credits: 10,
+          plan_name: "Credit-Based",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        setUserProfile(mockProfile);
+        userProfileCache.set(mockProfile);
+        return;
+      }
+
       const profile = await api.getUserProfile();
       setUserProfile(profile);
       userProfileCache.set(profile);

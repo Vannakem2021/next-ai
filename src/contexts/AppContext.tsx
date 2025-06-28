@@ -74,6 +74,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     try {
       setIsLoadingImages(true);
+
+      // Check if API is available
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      if (!apiUrl || apiUrl.includes("placeholder")) {
+        // API not available, set empty images
+        setGeneratedImages([]);
+        setIsLoadingImages(false);
+        return;
+      }
+
       const response = await api.getUserImages(50, 0); // Load first 50 images
       const convertedImages = response.images.map(
         convertStoredImageToGeneratedImage
@@ -81,9 +91,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setGeneratedImages(convertedImages);
     } catch (error) {
       // Don't show error toast for empty image list - it's normal for new users
-      if (error instanceof Error && !error.message.includes("404")) {
+      // Also don't show errors if API is unreachable (common on first load)
+      if (
+        error instanceof Error &&
+        !error.message.includes("404") &&
+        !error.message.includes("fetch") &&
+        !error.message.includes("network")
+      ) {
         showError("Failed to load your images");
       }
+      // Set empty images on error to prevent UI issues
+      setGeneratedImages([]);
     } finally {
       setIsLoadingImages(false);
     }
