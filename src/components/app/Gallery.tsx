@@ -8,9 +8,14 @@ import { GeneratedImage } from "@/lib/api";
 interface GalleryProps {
   images: GeneratedImage[];
   isLoading?: boolean;
+  onImageDeleted?: (imageId: string) => void;
 }
 
-export default function Gallery({ images, isLoading = false }: GalleryProps) {
+export default function Gallery({
+  images,
+  isLoading = false,
+  onImageDeleted,
+}: GalleryProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("newest");
   const [filterBy, setFilterBy] = useState("all");
@@ -141,7 +146,11 @@ export default function Gallery({ images, isLoading = false }: GalleryProps) {
             </div>
           </div>
         ) : (
-          <ImageGrid images={filteredAndSortedImages} isLoading={isLoading} />
+          <ImageGrid
+            images={filteredAndSortedImages}
+            isLoading={isLoading}
+            onImageDeleted={onImageDeleted}
+          />
         )}
       </div>
     </div>

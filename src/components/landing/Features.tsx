@@ -5,8 +5,8 @@ import {
   HiAdjustments,
   HiPlay,
   HiDesktopComputer,
+  HiCollection,
 } from "react-icons/hi";
-import { HiRectangleStack } from "react-icons/hi2";
 
 export default function Features() {
   return (
@@ -151,7 +151,7 @@ export default function Features() {
 
           <div className="bg-gray-800/30 rounded-xl p-6 text-center border border-gray-700 hover:border-green-500 transition-all duration-300">
             <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg flex items-center justify-center mx-auto mb-4">
-              <HiRectangleStack className="w-6 h-6 text-white" />
+              <HiCollection className="w-6 h-6 text-white" />
             </div>
             <h4 className="text-white font-semibold mb-2 font-space-grotesk">
               Batch Processing

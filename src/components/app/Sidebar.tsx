@@ -1,13 +1,12 @@
 "use client";
 
-import { useState } from "react";
 import { useUser, UserButton } from "@clerk/nextjs";
+import { usePathname } from "next/navigation";
+import Link from "next/link";
 import { HiPhotograph, HiCollection, HiX } from "react-icons/hi";
-import { useAPI, UserProfile } from "@/lib/api";
+import { UserProfile } from "@/lib/api";
 
 interface SidebarProps {
-  activeTab: "create" | "gallery";
-  onTabChange: (tab: "create" | "gallery") => void;
   userProfile: UserProfile | null;
   isOpen?: boolean;
   onClose?: () => void;
@@ -16,8 +15,6 @@ interface SidebarProps {
 }
 
 export default function Sidebar({
-  activeTab,
-  onTabChange,
   userProfile,
   isOpen = false,
   onClose,
@@ -25,6 +22,7 @@ export default function Sidebar({
   error = null,
 }: SidebarProps) {
   const { user } = useUser();
+  const pathname = usePathname();
 
   const navigationItems = [
     {
@@ -32,14 +30,24 @@ export default function Sidebar({
       name: "Create",
       icon: HiPhotograph,
       description: "Generate new images",
+      href: "/app/create",
     },
     {
       id: "gallery" as const,
       name: "Gallery",
       icon: HiCollection,
       description: "View your creations",
+      href: "/app/gallery",
     },
   ];
+
+  // Determine active tab based on current pathname
+  const getActiveTab = () => {
+    if (pathname === "/app/gallery") return "gallery";
+    return "create"; // Default to create for /app and /app/create
+  };
+
+  const activeTab = getActiveTab();
 
   return (
     <div
@@ -83,10 +91,10 @@ export default function Sidebar({
             const isActive = activeTab === item.id;
 
             return (
-              <button
+              <Link
                 key={item.id}
+                href={item.href}
                 onClick={() => {
-                  onTabChange(item.id);
                   // Close sidebar on mobile after selection
                   if (onClose && window.innerWidth < 1024) {
                     onClose();
@@ -117,7 +125,7 @@ export default function Sidebar({
                     {item.description}
                   </div>
                 </div>
-              </button>
+              </Link>
             );
           })}
         </div>

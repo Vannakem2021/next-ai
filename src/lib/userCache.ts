@@ -24,7 +24,7 @@ export class UserProfileCache {
   /**
    * Get cached user profile from memory or localStorage
    */
-  get(userId?: string): UserProfile | null {
+  get(): UserProfile | null {
     // First check memory cache
     if (this.memoryCache && this.isValid(this.memoryCache)) {
       return this.memoryCache.data;
@@ -34,10 +34,10 @@ export class UserProfileCache {
     try {
       const cached = localStorage.getItem(USER_PROFILE_KEY);
       const expiry = localStorage.getItem(CACHE_EXPIRY_KEY);
-      
+
       if (cached && expiry) {
         const cachedData: CachedUserProfile = JSON.parse(cached);
-        
+
         if (this.isValid(cachedData)) {
           // Update memory cache
           this.memoryCache = cachedData;
@@ -47,8 +47,7 @@ export class UserProfileCache {
           this.clear();
         }
       }
-    } catch (error) {
-      console.warn("Failed to read user profile cache:", error);
+    } catch {
       this.clear();
     }
 
@@ -72,9 +71,12 @@ export class UserProfileCache {
     // Update localStorage
     try {
       localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(cachedProfile));
-      localStorage.setItem(CACHE_EXPIRY_KEY, cachedProfile.expiresAt.toString());
-    } catch (error) {
-      console.warn("Failed to cache user profile:", error);
+      localStorage.setItem(
+        CACHE_EXPIRY_KEY,
+        cachedProfile.expiresAt.toString()
+      );
+    } catch {
+      // Silently fail cache operations
     }
   }
 
@@ -86,8 +88,8 @@ export class UserProfileCache {
     try {
       localStorage.removeItem(USER_PROFILE_KEY);
       localStorage.removeItem(CACHE_EXPIRY_KEY);
-    } catch (error) {
-      console.warn("Failed to clear user profile cache:", error);
+    } catch {
+      // Silently fail cache operations
     }
   }
 
@@ -112,8 +114,8 @@ export class UserProfileCache {
         const cachedData: CachedUserProfile = JSON.parse(cached);
         return this.isValid(cachedData);
       }
-    } catch (error) {
-      console.warn("Failed to check cache validity:", error);
+    } catch {
+      // Silently fail cache operations
     }
 
     return false;
@@ -126,12 +128,15 @@ export class UserProfileCache {
     if (this.memoryCache) {
       this.memoryCache.data.available_credits = availableCredits;
       this.memoryCache.data.used_credits = usedCredits;
-      
+
       // Update localStorage as well
       try {
-        localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(this.memoryCache));
-      } catch (error) {
-        console.warn("Failed to update cached credits:", error);
+        localStorage.setItem(
+          USER_PROFILE_KEY,
+          JSON.stringify(this.memoryCache)
+        );
+      } catch {
+        // Silently fail cache operations
       }
     }
   }

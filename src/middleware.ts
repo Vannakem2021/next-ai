@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 
 // Simple middleware - let Clerk handle auth at component level
-// This prevents the redirect loop by not interfering with auth flow
+// This prevents issues with secret keys and keeps auth client-side
 export function middleware() {
-  // Let all requests through - no auth enforcement at middleware level
+  // Let all requests through - auth is handled by components
   return NextResponse.next();
 }
 

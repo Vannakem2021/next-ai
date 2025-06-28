@@ -15,11 +15,11 @@ export default function Pricing() {
     }
 
     if (isSignedIn) {
-      // If user is already signed in, open /app in new tab
-      window.open("/app", "_blank");
+      // If user is already signed in, open /app/create in new tab
+      window.open("/app/create", "_blank");
     } else {
       // If user is not signed in, open auth page in new tab
-      // After auth, user will be redirected to /app in the same tab
+      // After auth, user will be redirected to /app/create
       window.open("/auth", "_blank");
     }
   };

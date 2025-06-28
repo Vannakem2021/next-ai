@@ -53,7 +53,7 @@ export const convertStoredImageToGeneratedImage = (
     isLiked: false, // We'll need to implement likes separately
     width: storedImage.width,
     height: storedImage.height,
-    model: "PicLumen Art V1", // Default model name
+    model: "Flux Dev", // Default model name
     seed: undefined, // Not stored in current backend schema
     guidanceScale: 1, // Default value
     steps: 20, // Default value
@@ -120,6 +120,15 @@ export interface ImageGenerationResponse {
   images: string[]; // Array of base64 data URLs
   metadata: ImageMetadata;
   user_info: UserInfo;
+}
+
+export interface DeleteImageResponse {
+  success: boolean;
+  message: string;
+  image_id: string;
+  filename?: string;
+  storage_deleted: boolean;
+  timestamp: string;
 }
 
 export interface GeneratedImage {
@@ -268,21 +277,24 @@ export class PicGenAPI {
   ): Promise<ImageGenerationResponse> {
     const headers = await this.getAuthHeaders();
 
-    // Prepare the request body according to backend API spec
+    // Create the default FLUX1-Dev workflow with user parameters
+    const workflow = this.createDefaultWorkflow(request);
+
+    // Prepare the request body for advanced endpoint
     const requestBody = {
-      prompt: request.prompt,
-      width: request.width || 1024,
-      height: request.height || 1024,
-      steps: request.steps || 4,
-      ...(request.seed && { seed: request.seed }),
-      ...(request.request_id && { request_id: request.request_id }),
+      input: {
+        workflow: workflow,
+      },
     };
 
-    const response = await fetch(`${API_BASE_URL}/api/v1/images/generate`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(requestBody),
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/v1/images/generate/advanced`,
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify(requestBody),
+      }
+    );
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -311,6 +323,110 @@ export class PicGenAPI {
     return response.json();
   }
 
+  // Create default FLUX1-Dev workflow with user parameters
+  private createDefaultWorkflow(
+    request: ImageGenerationRequest
+  ): Record<string, unknown> {
+    const seed = request.seed || Math.floor(Math.random() * 1000000000000000);
+
+    return {
+      "5": {
+        inputs: {
+          width: request.width || 1024,
+          height: request.height || 1024,
+          batch_size: 1,
+        },
+        class_type: "EmptyLatentImage",
+        _meta: { title: "Empty Latent Image" },
+      },
+      "6": {
+        inputs: {
+          text: request.prompt,
+          clip: ["11", 0],
+        },
+        class_type: "CLIPTextEncode",
+        _meta: { title: "CLIP Text Encode (Prompt)" },
+      },
+      "8": {
+        inputs: {
+          samples: ["13", 0],
+          vae: ["10", 0],
+        },
+        class_type: "VAEDecode",
+        _meta: { title: "VAE Decode" },
+      },
+      "9": {
+        inputs: {
+          filename_prefix: "ComfyUI",
+          images: ["8", 0],
+        },
+        class_type: "SaveImage",
+        _meta: { title: "Save Image" },
+      },
+      "10": {
+        inputs: { vae_name: "ae.safetensors" },
+        class_type: "VAELoader",
+        _meta: { title: "Load VAE" },
+      },
+      "11": {
+        inputs: {
+          clip_name1: "t5xxl_fp8_e4m3fn.safetensors",
+          clip_name2: "clip_l.safetensors",
+          type: "flux",
+        },
+        class_type: "DualCLIPLoader",
+        _meta: { title: "DualCLIPLoader" },
+      },
+      "12": {
+        inputs: {
+          unet_name: "flux1-dev.safetensors",
+          weight_dtype: "fp8_e4m3fn",
+        },
+        class_type: "UNETLoader",
+        _meta: { title: "Load Diffusion Model" },
+      },
+      "13": {
+        inputs: {
+          noise: ["25", 0],
+          guider: ["22", 0],
+          sampler: ["16", 0],
+          sigmas: ["17", 0],
+          latent_image: ["5", 0],
+        },
+        class_type: "SamplerCustomAdvanced",
+        _meta: { title: "SamplerCustomAdvanced" },
+      },
+      "16": {
+        inputs: { sampler_name: "euler" },
+        class_type: "KSamplerSelect",
+        _meta: { title: "KSamplerSelect" },
+      },
+      "17": {
+        inputs: {
+          scheduler: "sgm_uniform",
+          steps: request.steps || 4,
+          denoise: 1,
+          model: ["12", 0],
+        },
+        class_type: "BasicScheduler",
+        _meta: { title: "BasicScheduler" },
+      },
+      "22": {
+        inputs: {
+          model: ["12", 0],
+          conditioning: ["6", 0],
+        },
+        class_type: "BasicGuider",
+        _meta: { title: "BasicGuider" },
+      },
+      "25": {
+        inputs: { noise_seed: seed },
+        class_type: "RandomNoise",
+        _meta: { title: "RandomNoise" },
+      },
+    };
+  }
+
   // Fetch user's generated images
   async getUserImages(
     limit: number = 20,
@@ -330,6 +446,44 @@ export class PicGenAPI {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(
         errorData.detail || `Failed to fetch images: ${response.statusText}`
+      );
+    }
+
+    return response.json();
+  }
+
+  // Delete a generated image
+  async deleteImage(imageId: string): Promise<DeleteImageResponse> {
+    const headers = await this.getAuthHeaders();
+
+    // Check if Authorization header is present
+    if (!headers.Authorization) {
+      throw new Error("Authentication required: No authorization token found");
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/v1/images/${imageId}`, {
+      method: "DELETE",
+      headers,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+
+      // Handle specific error types
+      if (response.status === 404) {
+        throw new Error("Image not found or already deleted");
+      } else if (response.status === 403) {
+        throw new Error("Access denied: You can only delete your own images");
+      } else if (response.status === 500) {
+        throw new Error(
+          errorData.detail?.details ||
+            errorData.detail ||
+            "Failed to delete image"
+        );
+      }
+
+      throw new Error(
+        errorData.detail || `Failed to delete image: ${response.statusText}`
       );
     }
 

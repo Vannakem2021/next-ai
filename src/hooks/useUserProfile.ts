@@ -27,10 +27,44 @@ export const useUserProfile = (): UseUserProfileReturn => {
     }
   }, [isLoaded]);
 
+  const fetchUserProfile = useCallback(async () => {
+    if (!isSignedIn || !isLoaded) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      const profile = await api.getUserProfile();
+      setUserProfile(profile);
+      userProfileCache.set(profile);
+    } catch (err) {
+      // Only set error if we don't have cached data
+      if (!userProfile) {
+        setError(
+          err instanceof Error ? err.message : "Failed to load user data"
+        );
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [isSignedIn, isLoaded, api, userProfile]);
+
+  // Silent fetch for background updates (doesn't show loading state)
+  const fetchUserProfileSilently = useCallback(async () => {
+    if (!isSignedIn || !isLoaded) return;
+
+    try {
+      const profile = await api.getUserProfile();
+      setUserProfile(profile);
+      userProfileCache.set(profile);
+    } catch {
+      // Don't update error state for silent fetches
+    }
+  }, [isSignedIn, isLoaded, api]);
+
   // Initialize with cached data immediately
   useEffect(() => {
     if (!hasInitialized && isLoaded && isSignedIn) {
-      const cachedProfile = userProfileCache.get(user?.id);
+      const cachedProfile = userProfileCache.get();
       if (cachedProfile) {
         setUserProfile(cachedProfile);
         setLoading(false); // We have cached data, stop loading
@@ -42,43 +76,14 @@ export const useUserProfile = (): UseUserProfileReturn => {
         fetchUserProfile(); // This will set loading to true and then false when done
       }
     }
-  }, [isLoaded, isSignedIn, user?.id, hasInitialized]);
-
-  const fetchUserProfile = useCallback(async () => {
-    if (!isSignedIn || !isLoaded) return;
-
-    try {
-      setLoading(true);
-      setError(null);
-      const profile = await api.getUserProfile();
-      setUserProfile(profile);
-      userProfileCache.set(profile);
-    } catch (err) {
-      console.error("Failed to fetch user profile:", err);
-      // Only set error if we don't have cached data
-      if (!userProfile) {
-        setError(
-          err instanceof Error ? err.message : "Failed to load user data"
-        );
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [isSignedIn, isLoaded, api]);
-
-  // Silent fetch for background updates (doesn't show loading state)
-  const fetchUserProfileSilently = useCallback(async () => {
-    if (!isSignedIn || !isLoaded) return;
-
-    try {
-      const profile = await api.getUserProfile();
-      setUserProfile(profile);
-      userProfileCache.set(profile);
-    } catch (err) {
-      console.error("Silent fetch failed:", err);
-      // Don't update error state for silent fetches
-    }
-  }, [isSignedIn, isLoaded, api]);
+  }, [
+    isLoaded,
+    isSignedIn,
+    user?.id,
+    hasInitialized,
+    fetchUserProfile,
+    fetchUserProfileSilently,
+  ]);
 
   const refetch = useCallback(async () => {
     await fetchUserProfile();

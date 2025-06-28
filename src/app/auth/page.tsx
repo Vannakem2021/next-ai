@@ -11,16 +11,40 @@ export default function AuthPage() {
   const { isSignedIn, isLoaded } = useAuth();
   const { signIn } = useSignIn();
 
-  // Handler functions
+  // Enhanced handler functions with redirect validation
+  const getValidRedirectUrl = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const redirectTo = urlParams.get("redirect");
+
+    // Validate redirect URL to prevent loops
+    if (
+      !redirectTo ||
+      redirectTo === "/auth" ||
+      redirectTo.includes("/auth") ||
+      !redirectTo.startsWith("/")
+    ) {
+      console.log(
+        "Auth handlers: Using default redirect due to invalid redirect:",
+        redirectTo
+      );
+      return "/app/create";
+    }
+
+    console.log("Auth handlers: Using valid redirect:", redirectTo);
+    return redirectTo;
+  };
+
   const handleSocialSignIn = async (strategy: "oauth_google") => {
     if (!signIn) return;
 
     setIsLoading(true);
     try {
+      const validRedirectUrl = getValidRedirectUrl();
+
       await signIn.authenticateWithRedirect({
         strategy,
-        redirectUrl: "/app",
-        redirectUrlComplete: "/app",
+        redirectUrl: validRedirectUrl,
+        redirectUrlComplete: validRedirectUrl,
       });
     } catch (error) {
       console.error("Social sign in error:", error);
@@ -37,9 +61,12 @@ export default function AuthPage() {
       await signIn.create({
         identifier: email,
       });
+
+      const validRedirectUrl = getValidRedirectUrl();
+
       // This would typically redirect to a verification page
-      // For now, we'll just redirect to app
-      window.location.href = "/app";
+      // For now, we'll just redirect to the appropriate page
+      window.location.href = validRedirectUrl;
     } catch (error) {
       console.error("Email sign in error:", error);
       setIsLoading(false);
@@ -55,15 +82,74 @@ export default function AuthPage() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Redirect signed-in users to app with loop prevention
+  // Enhanced redirect logic with loop prevention
   useEffect(() => {
     if (isLoaded && isSignedIn) {
-      // Add delay to prevent rapid redirects and allow Clerk to settle
+      // Check if there's a redirect parameter
+      const urlParams = new URLSearchParams(window.location.search);
+      const redirectTo = urlParams.get("redirect");
+
+      console.log("Auth page: User is signed in, processing redirect", {
+        redirectTo,
+        currentPath: window.location.pathname,
+        isLoaded,
+        isSignedIn,
+        timestamp: Date.now(),
+      });
+
+      // Enhanced redirect loop prevention with more checks
+      const isInvalidRedirect =
+        !redirectTo ||
+        redirectTo === "/auth" ||
+        redirectTo === window.location.pathname ||
+        redirectTo.includes("/auth") ||
+        !redirectTo.startsWith("/") ||
+        redirectTo.includes("?redirect="); // Prevent nested redirects
+
+      if (isInvalidRedirect) {
+        console.log(
+          "Auth page: Invalid or circular redirect detected, using default",
+          {
+            redirectTo,
+            reason: "invalid_redirect",
+            currentPath: window.location.pathname,
+            timestamp: Date.now(),
+          }
+        );
+
+        // Use a longer delay to ensure auth state is fully stable
+        const timer = setTimeout(() => {
+          // Triple-check auth state and ensure we're still on auth page
+          if (isSignedIn && window.location.pathname.startsWith("/auth")) {
+            console.log("Auth page: Redirecting to default app", {
+              timestamp: Date.now(),
+              currentPath: window.location.pathname,
+            });
+            window.location.href = "/app/create";
+          }
+        }, 750); // Increased delay for better stability
+
+        return () => clearTimeout(timer);
+      }
+
+      // Valid redirect - add delay to prevent rapid redirects and allow Clerk to settle
       const timer = setTimeout(() => {
-        if (isSignedIn) {
-          window.location.href = "/app";
+        // Triple-check auth state and ensure we're still on auth page before redirecting
+        if (isSignedIn && window.location.pathname.startsWith("/auth")) {
+          console.log("Auth page: Redirecting to requested page:", {
+            redirectTo,
+            timestamp: Date.now(),
+            currentPath: window.location.pathname,
+          });
+          window.location.href = redirectTo;
+        } else {
+          console.log("Auth page: Skipping redirect - conditions not met", {
+            isSignedIn,
+            currentPath: window.location.pathname,
+            timestamp: Date.now(),
+          });
         }
-      }, 300);
+      }, 750); // Increased delay for stability
 
       return () => clearTimeout(timer);
     }

@@ -12,7 +12,7 @@ export default function Hero() {
       // Show a brief loading state instead of opening immediately
       setTimeout(() => {
         if (isSignedIn) {
-          window.open("/app", "_blank");
+          window.open("/app/create", "_blank");
         } else {
           window.open("/auth", "_blank");
         }
@@ -21,8 +21,8 @@ export default function Hero() {
     }
 
     if (isSignedIn) {
-      // If user is already signed in, open /app directly in new tab
-      window.open("/app", "_blank");
+      // If user is already signed in, open /app/create directly in new tab
+      window.open("/app/create", "_blank");
     } else {
       // If user is not signed in, open auth page in new tab
       window.open("/auth", "_blank");

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { HiX } from "react-icons/hi";
 import { GeneratedImage } from "@/lib/api";
 
@@ -94,10 +95,13 @@ export default function ImageDetailModal({
 
         {/* Full Screen Image */}
         <div className="w-full h-full flex items-center justify-center p-4">
-          <img
+          <Image
             src={image.url}
             alt={image.prompt}
+            width={800}
+            height={800}
             className="max-w-full max-h-full object-contain"
+            unoptimized
           />
         </div>
       </div>
@@ -116,10 +120,13 @@ export default function ImageDetailModal({
             {/* Image Section */}
             <div className="flex-1 bg-gray-800 flex items-center justify-center p-6">
               <div className="relative max-w-full max-h-full">
-                <img
+                <Image
                   src={image.url}
                   alt={image.prompt}
+                  width={600}
+                  height={600}
                   className="max-w-full max-h-full object-contain rounded-lg"
+                  unoptimized
                 />
               </div>
             </div>
